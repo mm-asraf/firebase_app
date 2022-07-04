@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useState } from "react";
 import { app, database } from "./firebase.config";
 import {
@@ -8,6 +8,9 @@ import {
   doc,
   updateDoc,
   deleteDoc,
+  onSnapshot,
+  query,
+  where,
 } from "firebase/firestore";
 import {
   createUserWithEmailAndPassword,
@@ -15,11 +18,15 @@ import {
   signInWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
+  onAuthStateChanged,
+  signOut,
 } from "firebase/auth";
 
 const userData = {
   email: "",
   password: "",
+  firstName: "",
+  age: "",
 };
 
 const Login = () => {
@@ -58,6 +65,16 @@ const Login = () => {
       });
   };
 
+  const handleLogout = () => {
+    signOut(auth);
+  };
+
+  useEffect(() => {
+    onAuthStateChanged(auth, (data) => {
+      console.log(data);
+    });
+  });
+
   const handleSubmitSigninWithGoogle = () => {
     signInWithPopup(auth, GoogleProvider)
       .then((res) => {
@@ -69,11 +86,15 @@ const Login = () => {
       });
   };
 
+  const ageQuery = query(collectionRef, where("age", ">", 28));
+
   //   collecion submit add data
-  const handleSubmitColl = () => {
+  const addData = () => {
     addDoc(collectionRef, {
       email: data.email,
       password: data.password,
+      firstName: data.firstName,
+      age: Number(data.age),
     })
       .then((res) => {
         alert("Data added");
@@ -85,13 +106,28 @@ const Login = () => {
 
   //   getdata
   const getData = () => {
-    getDocs(collectionRef).then((res) => {
+    // getDocs(collectionRef).then((res) => {
+    //   console.log(
+    //     res.docs.map((item) => {
+    //       return { ...item.data(), id: item.id };
+    //     })
+    //   );
+    // });
+    onSnapshot(collectionRef, (data) => {
       console.log(
-        res.docs.map((item) => {
-          return { ...item.data(), id: item.id };
+        data.docs.map((item) => {
+          return item.data();
         })
       );
     });
+    //realtime updates with filter
+    // onSnapshot(ageQuery, (data) => {
+    //   console.log(
+    //     data.docs.map((item) => {
+    //       return item.data();
+    //     })
+    //   );
+    // });
   };
 
   const updateData = () => {
@@ -122,6 +158,23 @@ const Login = () => {
       });
   };
 
+  useEffect(() => {
+    onSnapshot(collectionRef, (data) => {
+      console.log(
+        data.docs.map((item) => {
+          return { ...item.data(), id: item.id };
+        })
+      );
+    });
+    onAuthStateChanged(auth, (data) => {
+      if (data) {
+        alert("Logged In");
+      } else {
+        alert("Not logged In");
+      }
+    });
+  }, []);
+
   return (
     <div>
       <input
@@ -141,10 +194,35 @@ const Login = () => {
 
       <button onClick={handleSubmitSignup}>Signup</button>
       <button onClick={handleSubmitSignin}>Login</button>
+      <button onClick={handleLogout}>Logout</button>
+      <br />
+
+      <input
+        type="text"
+        placeholder="Enter firstName"
+        name="firstName"
+        value={data.firstName}
+        onChange={handleChange}
+      />
+      <input
+        type="text"
+        placeholder="Enter email"
+        name="email"
+        value={data.email}
+        onChange={handleChange}
+      />
+
+      <input
+        type="text"
+        placeholder="Enter age"
+        name="age"
+        value={data.age}
+        onChange={handleChange}
+      />
       <br />
 
       <button onClick={handleSubmitSigninWithGoogle}>Login</button>
-      <button onClick={handleSubmitColl}>add data</button>
+      <button onClick={addData}>add data</button>
       <button onClick={getData}>get data</button>
       <button onClick={updateData}>update data</button>
       <button onClick={deleteData}>delete data</button>
